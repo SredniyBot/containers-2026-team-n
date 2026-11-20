@@ -20,12 +20,12 @@
 | ЛР | Отчёт | Файлы |
 |---|---|---|
 | 1. Dockerfile | [docs/lab1-dockerfile.md](docs/lab1-dockerfile.md) | [Dockerfile](Dockerfile), [Dockerfile.bad](Dockerfile.bad) |
+| 2. Docker Compose | [docs/lab2-compose.md](docs/lab2-compose.md) | [docker-compose.yml](docker-compose.yml), [.env](.env) |
 
 ## Быстрый старт
 
 ```bash
-docker build -t notes-app:good .
-docker run -d -p 8080:8080 -v notes-data:/data notes-app:good
+docker compose up -d --build
 ```
 
 Открыть http://localhost:8080.

@@ -35,7 +35,11 @@ public final class Server {
     }
 
     public static void start(Config config) throws Exception {
-        Storage storage = new FileStorage(config.dataDir());
+        Storage storage = switch (config.storage()) {
+            case "file" -> new FileStorage(config.dataDir());
+            case "postgres" -> new PostgresStorage(config);
+            default -> throw new IllegalArgumentException("STORAGE must be file or postgres");
+        };
         Server app = new Server(storage);
 
         HttpServer http = HttpServer.create(new InetSocketAddress(config.port()), 0);
