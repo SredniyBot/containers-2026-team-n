@@ -1,0 +1,23 @@
+# Плохой Dockerfile: собирается и работает, но так делать не надо.
+# Номера ошибок совпадают с разбором в docs/lab1-dockerfile.md
+
+# (1) плавающий тег latest
+FROM maven:latest
+
+WORKDIR /app
+
+# (3) update отдельным слоем, лишние пакеты «на всякий случай», кэш apt остаётся в образе
+RUN apt-get update
+RUN apt-get install -y curl vim nano htop
+
+# (4) копируем всё подряд до сборки, без .dockerignore
+COPY . .
+
+# (2) собираем в том же образе, в котором будем запускать
+RUN mvn -B package -f app/pom.xml
+
+EXPOSE 8080
+
+# (5) USER не указан — процесс работает от root
+# (6) shell-форма: PID 1 — это /bin/sh, а не java
+ENTRYPOINT java -jar app/target/notes.jar serve

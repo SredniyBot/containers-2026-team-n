@@ -1,0 +1,5 @@
+# Исключения только для хорошего Dockerfile (BuildKit ищет файл <имя Dockerfile>.dockerignore).
+# В контекст сборки попадают только pom.xml и исходники — всё остальное отсекаем.
+*
+!app/pom.xml
+!app/src/
