@@ -21,6 +21,7 @@
 |---|---|---|
 | 1. Dockerfile | [docs/lab1-dockerfile.md](docs/lab1-dockerfile.md) | [Dockerfile](Dockerfile), [Dockerfile.bad](Dockerfile.bad) |
 | 2. Docker Compose | [docs/lab2-compose.md](docs/lab2-compose.md) | [docker-compose.yml](docker-compose.yml), [.env](.env) |
+| 3. Kubernetes | [docs/lab3-kubernetes.md](docs/lab3-kubernetes.md) | [lab3-nextcloud/](lab3-nextcloud) |
 
 ## Быстрый старт
 

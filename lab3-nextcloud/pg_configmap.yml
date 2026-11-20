@@ -1,0 +1,9 @@
+# Несекретные настройки PostgreSQL. Логин и пароль перенесены в pg_secret.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-configmap
+  labels:
+    app: postgres
+data:
+  POSTGRES_DB: "postgres"
