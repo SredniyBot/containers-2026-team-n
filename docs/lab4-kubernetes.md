@@ -16,6 +16,10 @@ minikube service notes-app -n notes --url
 
 ![Приложение в Kubernetes](img/lab4-app.png)
 
+Поды в dashboard (`minikube dashboard`), с метками и без перезапусков:
+
+![Поды notes в dashboard](img/lab4-dashboard.png)
+
 ```
                  Service notes-app (NodePort)
                     │               │
@@ -91,7 +95,7 @@ notes-app-ff98b99d8-zhcwg   1/1     Running   0          50s
 
 ### Метки
 
-Используем рекомендованные метки `app.kubernetes.io/*`: `name`, `component`, `part-of`, на Deployment и подах ещё `version`. По ним выбираются объекты одной роли:
+Используем рекомендованные метки `app.kubernetes.io/*`: `name`, `component`, `part-of`, на обоих Deployment и подах приложения ещё `version`. По ним выбираются объекты одной роли:
 
 ```
 $ kubectl -n notes get all -l app.kubernetes.io/component=database -o name
