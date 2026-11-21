@@ -1,10 +1,10 @@
 # ЛР 4. Своё приложение в Kubernetes
 
-Перенесли связку из ЛР 2 в minikube: PostgreSQL и приложение «Заметки» в двух репликах. Роль сервиса `migrate` здесь играет init-контейнер. Манифесты лежат в [k8s/](../k8s), всё создаётся в пространстве имён `notes`.
+Связку из ЛР 2 перенесли в minikube: PostgreSQL и две реплики «Заметок». Вместо сервиса `migrate` теперь init-контейнер. Манифесты лежат в [k8s/](../k8s), все объекты создаются в пространстве имён `notes`.
 
 ## Запуск
 
-Образ приложения собираем из [Dockerfile](../Dockerfile) и загружаем в minikube. Из реестра его не скачать: он нигде не опубликован. Образ Postgres загружаем так же, чтобы не зависеть от Docker Hub.
+Образ приложения нигде не опубликован, поэтому собираем его из [Dockerfile](../Dockerfile) и загружаем в minikube напрямую. Образ Postgres загружаем так же, чтобы не зависеть от Docker Hub.
 
 ```bash
 docker build -t notes-app:2.0 .
@@ -16,9 +16,9 @@ kubectl -n notes rollout status deploy/notes-app
 minikube service notes-app -n notes --url
 ```
 
-Последняя команда открывает туннель и печатает адрес вида `http://127.0.0.1:52512`. Порт каждый раз случайный, а терминал с туннелем закрывать нельзя. Дальше в отчёте адрес взят из нашего запуска.
+Последняя команда открывает туннель и печатает адрес вроде `http://127.0.0.1:52512`. Порт каждый раз новый, терминал с туннелем закрывать нельзя. В примерах ниже адрес из нашего запуска.
 
-Файлы пронумерованы, потому что `kubectl apply -f k8s/` идёт по алфавиту, а Namespace должен появиться первым. Удалить всё разом: `kubectl delete namespace notes`.
+Номера в именах файлов нужны потому, что `kubectl apply -f k8s/` идёт по алфавиту, а Namespace должен появиться первым. Удаляется всё одной командой: `kubectl delete namespace notes`.
 
 ```
 $ kubectl -n notes get deploy,pods,svc,pvc
@@ -41,7 +41,7 @@ persistentvolumeclaim/notes-db-data   Bound    pvc-4282984a-27f0-4140-9c3f-41ee9
 
 ![Приложение в Kubernetes](img/lab4-app.png)
 
-## Устройство
+## Как устроено
 
 ```
                  Service notes-app (NodePort)
@@ -66,24 +66,24 @@ persistentvolumeclaim/notes-db-data   Bound    pvc-4282984a-27f0-4140-9c3f-41ee9
 | [20-db.yml](../k8s/20-db.yml) | PVC, Deployment и Service базы |
 | [30-app.yml](../k8s/30-app.yml) | Deployment приложения с init-контейнером и Service |
 
-## Требования → где выполнено
+## Пункты задания
 
-| Требование | Где |
+| Пункт | Где сделано |
 |---|---|
 | Минимум два Deployment | `notes-db` и `notes-app` |
 | Кастомный образ хотя бы для одного | `notes-app:2.0`, собран из нашего Dockerfile и загружен в minikube через `minikube image load` |
-| Контейнер + init-контейнер в одном Deployment | `notes-app`: init `migrate` и основной `app` |
+| Контейнер и init-контейнер в одном Deployment | `notes-app`: init `migrate` и основной `app` |
 | Volume | PVC `notes-db-data` смонтирован в `/var/lib/postgresql/data` |
 | ConfigMap и/или Secret | оба: `notes-config` и `notes-db-secret` |
 | Service | `notes-db` (ClusterIP) и `notes-app` (NodePort) |
 | Liveness / Readiness | у приложения обе, у базы `pg_isready` и TCP-проверка |
 | Метки сверх selector | `part-of` на всех объектах, `component` на объектах базы и приложения, `version` на Deployment и подах |
 
-## Ход работы и проверки
+## Ход работы
 
 ### Init-контейнер ждёт базу и создаёт схему
 
-В Kubernetes нет `depends_on`, и поды приложения стартуют одновременно с базой. Init-контейнер `migrate` — это тот же образ с командой `migrate`. Он повторяет подключение, пока база не ответит, затем создаёт схему и завершается. Основной контейнер запускается только после его успешного выхода.
+`depends_on` в Kubernetes нет, и поды приложения стартуют вместе с базой. Init-контейнер `migrate` — тот же образ, запущенный с командой `migrate`. Он пытается подключиться, пока база не ответит, потом создаёт схему и завершается. Основной контейнер стартует, только если init-контейнер завершился успешно.
 
 ```
 $ kubectl -n notes logs notes-app-ff98b99d8-6c5mm -c migrate
@@ -94,9 +94,9 @@ $ kubectl -n notes logs notes-app-ff98b99d8-6c5mm -c migrate
 2026-11-20T23:57:11.349433024Z migration done
 ```
 
-`MIGRATE_TIMEOUT` в ConfigMap — 180 секунд, а не 60, как в Compose. Первая инициализация базы на новом томе у нас доходила до двух минут (см. ЛР 2), и init-контейнер не должен сдаться раньше.
+`MIGRATE_TIMEOUT` в ConfigMap поставили 180 секунд вместо 60 в Compose. Первая инициализация базы на новом томе у нас доходила до двух минут (см. ЛР 2), и init-контейнер не должен сдаться раньше.
 
-Реплик две, поэтому миграция запустилась дважды почти одновременно. Вторая не мешает первой: перед изменением схемы команда берёт блокировку `pg_advisory_xact_lock`, а SQL-скрипт можно выполнять повторно. В итоге в базе одна таблица и одна стартовая заметка.
+Реплик две, и миграция запускалась дважды почти одновременно. Друг другу запуски не мешают: перед изменением схемы команда берёт блокировку `pg_advisory_xact_lock`, а SQL-скрипт рассчитан на повторное выполнение. После обоих запусков в базе одна таблица и одна стартовая заметка.
 
 ### Данные переживают удаление пода базы
 
@@ -108,17 +108,15 @@ $ curl http://127.0.0.1:52512/api/notes
 [{"id":2,"text":"Заметка из Kubernetes",...},{"id":1,"text":"Схему создала команда migrate",...}]
 ```
 
-В ЛР 3 похожий опыт с Postgres без тома удалил 131 таблицу Nextcloud.
+В ЛР 3 после похожего опыта с Postgres без тома от 131 таблицы Nextcloud не осталось ни одной.
 
-Несколько решений по базе:
+У Deployment базы `strategy: Recreate`. При обновлении старый под останавливается раньше, чем стартует новый, и два Postgres не пишут в один том одновременно. `PGDATA` указывает на подкаталог `pgdata`: в корне тома может оказаться служебный `lost+found`, и initdb откажется работать в непустом каталоге.
 
-- `strategy: Recreate`: при обновлении старый под останавливается раньше, чем стартует новый, и два Postgres не пишут в один том одновременно.
-- `PGDATA` указывает на подкаталог `pgdata`. В корне тома может оказаться служебный `lost+found`, и тогда initdb откажется работать с непустым каталогом.
-- Deployment, а не StatefulSet. StatefulSet нужен, когда у реплик базы свои тома и постоянные имена, например при репликации. У нас реплика одна, и Deployment с PVC и `Recreate` справляется.
+Для баз часто советуют StatefulSet, но мы взяли Deployment. StatefulSet нужен, когда у каждой реплики свой том и постоянное имя, например при репликации. У нас реплика одна, и Deployment с PVC и `Recreate` справляется.
 
 ### Пробы
 
-Пока база перезапускалась, приложение отвечало на `/health/ready` кодом 503, readiness-проба не проходила, и Kubernetes временно убрал поды из Service. Liveness при этом проходила, поэтому поды не перезапускались. После восстановления базы оба пода снова готовы, счётчик перезапусков нулевой:
+Пока база перезапускалась, приложение отвечало на `/health/ready` кодом 503, readiness-проба не проходила, и Kubernetes на это время убрал поды из Service. Liveness проходила, поэтому поды не перезапускались. Когда база поднялась, оба пода снова стали готовы, перезапусков ноль:
 
 ```
 $ kubectl -n notes get events          # вывод сокращён
@@ -131,15 +129,15 @@ notes-app-ff98b99d8-6c5mm   1/1     Running   0          50s
 notes-app-ff98b99d8-zhcwg   1/1     Running   0          50s
 ```
 
-Так и задумано: `/health/live` проверяет только процесс, `/health/ready` — ещё и доступ к базе. Если бы liveness зависела от базы, сбой Postgres вызывал бы цепочку бесполезных перезапусков приложения.
+Ради этого пробы и разведены по разным адресам. `/health/live` проверяет только процесс, `/health/ready` ещё и доступ к базе. Если бы liveness зависела от базы, каждый сбой Postgres перезапускал бы исправное приложение.
 
 ### Две реплики за одним Service
 
-На странице выводится имя пода, который ответил. Из 10 запросов подряд 2 обработал один под и 8 другой. Service распределяет новые соединения между готовыми подами.
+Страница показывает имя пода, который её отдал. Из 10 запросов подряд один под обработал 2, другой 8. Service раздаёт новые соединения готовым подам, но не строго по очереди.
 
 ### Метки
 
-Используем общепринятые метки из документации Kubernetes, их же ставят Helm-чарты. На Deployment, подах, Service и PVC стоят `app.kubernetes.io/name`, `component` (database или backend) и `part-of: notes`, на Deployment и подах ещё `version`. На Namespace, ConfigMap и Secret — только `part-of`. Метки позволяют выбирать объекты по смыслу, а не по имени:
+Взяли рекомендованные метки из документации Kubernetes, те же, что ставят Helm-чарты. На Deployment, подах, Service и PVC стоят `app.kubernetes.io/name`, `component` (database или backend) и `part-of: notes`, на Deployment и подах ещё `version`. На Namespace, ConfigMap и Secret только `part-of`. С метками объекты можно выбирать по роли, не перечисляя имена:
 
 ```
 $ kubectl -n notes get all -l app.kubernetes.io/component=database -o name
@@ -151,11 +149,11 @@ replicaset.apps/notes-db-7dd8c8c4bc
 $ kubectl -n notes get deploy,svc,pvc,cm,secret -l app.kubernetes.io/part-of=notes
 ```
 
-Selector у Deployment и Service опирается только на `app.kubernetes.io/name`. Selector Deployment после создания менять нельзя, поэтому `version` в него не включаем: иначе смена версии потребовала бы пересоздать Deployment.
+Selector у Deployment и Service — одна метка `app.kubernetes.io/name`. Selector Deployment после создания менять нельзя, и если бы в него входила `version`, при каждой смене версии Deployment пришлось бы пересоздавать.
 
 ### Запуск не от root
 
-В шаблоне пода приложения указано `securityContext.runAsNonRoot: true`. Наш образ из ЛР 1 работает под uid 10001 и проходит проверку:
+В шаблоне пода приложения указано `securityContext.runAsNonRoot: true`. Наш образ из ЛР 1 работает под uid 10001 и проверку проходит:
 
 ```
 $ kubectl -n notes exec deploy/notes-app -- id
@@ -171,5 +169,3 @@ $ kubectl -n notes get pod rootcheck \
     -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}: {.status.containerStatuses[0].state.waiting.message}'
 CreateContainerConfigError: container has runAsNonRoot and image will run as root (pod: "rootcheck_notes(…)", container: rootcheck)
 ```
-
-Это ещё один довод против пятой плохой практики из ЛР 1.

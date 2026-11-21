@@ -14,8 +14,8 @@
 
 ## ЛР 3 — Kubernetes (метка `lab3`)
 
-- Манифесты Nextcloud + PostgreSQL из методички в `lab3-nextcloud/`, доработанные по заданию: Secret для Postgres, ConfigMap для Nextcloud, пробы.
-- Лимит памяти Nextcloud поднят с 256Mi до 512Mi: с исходным под падал по OOMKilled при входе через браузер.
+- Манифесты Nextcloud и PostgreSQL из методички в `lab3-nextcloud/`, доработанные по заданию: Secret для Postgres, ConfigMap для Nextcloud, пробы.
+- Лимит памяти Nextcloud поднят с 256Mi до 512Mi. С исходным под падал по OOMKilled при входе через браузер.
 - Отчёт [docs/lab3-kubernetes.md](docs/lab3-kubernetes.md). Приложение «Заметки» в этой лабе не менялось.
 
 ## ЛР 4 — своё приложение в Kubernetes (метка `lab4`)
