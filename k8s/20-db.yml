@@ -1,0 +1,99 @@
+# База данных: том, Deployment и Service.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: notes-db-data
+  namespace: notes
+  labels:
+    app.kubernetes.io/name: notes-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: notes
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes-db
+  namespace: notes
+  labels:
+    app.kubernetes.io/name: notes-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: notes
+    app.kubernetes.io/version: "16.16"
+spec:
+  replicas: 1
+  # Два пода Postgres на одном томе испортят данные: сначала останавливаем старый.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notes-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notes-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: notes
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16.16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: notes-config
+            - secretRef:
+                name: notes-db-secret
+          env:
+            # Подкаталог: в корне тома может оказаться служебный lost+found
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: postgres
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: notes-db-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes-db
+  namespace: notes
+  labels:
+    app.kubernetes.io/name: notes-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: notes
+spec:
+  type: ClusterIP          # базе не нужно наружу, к ней ходит только приложение
+  selector:
+    app.kubernetes.io/name: notes-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

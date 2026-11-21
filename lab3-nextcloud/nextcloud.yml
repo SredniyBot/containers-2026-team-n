@@ -42,7 +42,7 @@ spec:
       - name: nextcloud
         image: docker.io/nextcloud:stable-apache
         # Изменено: с лимитом 256Mi из методички под убивало OOMKilled
-        # при первом же входе через браузер. Замер пика — в отчёте.
+        # при первом же входе через браузер. Замеры памяти — в отчёте.
         resources:
           limits:
             cpu: 500m

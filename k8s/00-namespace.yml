@@ -1,0 +1,8 @@
+# ЛР 4. Всё приложение живёт в отдельном пространстве имён:
+# его легко посмотреть целиком и удалить одной командой.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: notes
+  labels:
+    app.kubernetes.io/part-of: notes

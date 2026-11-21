@@ -17,3 +17,9 @@
 - Манифесты Nextcloud + PostgreSQL из методички в `lab3-nextcloud/`, доработанные по заданию: Secret для Postgres, ConfigMap для Nextcloud, пробы.
 - Лимит памяти Nextcloud поднят с 256Mi до 512Mi: с исходным под падал по OOMKilled при входе через браузер.
 - Отчёт [docs/lab3-kubernetes.md](docs/lab3-kubernetes.md). Приложение «Заметки» в этой лабе не менялось.
+
+## ЛР 4 — своё приложение в Kubernetes (метка `lab4`)
+
+- Манифесты в `k8s/`: Namespace, ConfigMap и Secret, PostgreSQL с PVC, приложение в двух репликах с init-контейнером `migrate`, Service для обоих.
+- Код приложения не менялся: команда `migrate` из ЛР 2 стала init-контейнером без доработок.
+- Отчёт [docs/lab4-kubernetes.md](docs/lab4-kubernetes.md).
