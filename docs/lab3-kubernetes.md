@@ -1,6 +1,6 @@
 # ЛР 3. Kubernetes
 
-Развернули в minikube Nextcloud с PostgreSQL по манифестам из методички и доработали их: логин и пароль Postgres перенесли в Secret, переменные Nextcloud в ConfigMap, добавили Nextcloud пробы. Манифесты лежат в [lab3-nextcloud/](../lab3-nextcloud).
+Развернули в minikube Nextcloud с PostgreSQL по манифестам из методички и доработали их: для каждого сервиса выделили собственные ConfigMap и Secret, добавили Nextcloud пробы. Манифесты лежат в [lab3-nextcloud/](../lab3-nextcloud).
 
 ## Запуск
 
@@ -34,12 +34,12 @@ Dashboard (`minikube dashboard`):
 
 | Пункт | Где сделано |
 |---|---|
-| Postgres: `POSTGRES_USER` и `POSTGRES_PASSWORD` в Secret | [pg_secret.yml](../lab3-nextcloud/pg_secret.yml), подключён через `envFrom` в [pg_deployment.yml](../lab3-nextcloud/pg_deployment.yml). В [pg_configmap.yml](../lab3-nextcloud/pg_configmap.yml) осталась только `POSTGRES_DB` |
-| Nextcloud: переменные из Deployment в ConfigMap | `nextcloud-configmap` в [nextcloud.yml](../lab3-nextcloud/nextcloud.yml), подключён через `envFrom` |
+| Postgres: собственные ConfigMap и Secret | [pg_configmap.yml](../lab3-nextcloud/pg_configmap.yml) содержит `POSTGRES_DB`, [pg_secret.yml](../lab3-nextcloud/pg_secret.yml) — учётные данные; [Deployment](../lab3-nextcloud/pg_deployment.yml) подключает оба через `envFrom` |
+| Nextcloud: собственные ConfigMap и Secret | [nextcloud.yml](../lab3-nextcloud/nextcloud.yml) содержит `nextcloud-configmap` с настройками подключения и `nextcloud-secret` с паролями; Deployment подключает только их через `envFrom` |
 | Nextcloud: liveness и readiness | там же, плюс startup-проба |
 | Ход работы со скриншотами, ответы на вопросы | этот отчёт |
 
-Значения Postgres Nextcloud берёт по ключу (`configMapKeyRef`, `secretKeyRef`), лишние в его окружение не попадают. Secret значения не шифрует: `kubectl get secret -o yaml` отдаёт их в base64. Он позволяет ограничить доступ через RBAC и включить шифрование в etcd. Поэтому учебные пароли лежат в репозитории открытым текстом, а в рабочем проекте Secret создают из хранилища секретов.
+Deployment Nextcloud не ссылается на объекты PostgreSQL, а Deployment PostgreSQL не читает настройки Nextcloud. Название базы и учётные данные совпадают в двух наборах ресурсов, поскольку обоим сервисам нужно подключиться к одной БД. Значения должны обновляться согласованно. Secret значения не шифрует: `kubectl get secret -o yaml` отдаёт их в base64. Поэтому учебные пароли лежат в репозитории открытым текстом, а в рабочем проекте их передают из хранилища секретов.
 
 `ALLOW_EMPTY_PASSWORD` и `NEXTCLOUD_UPDATE` из методички на этот образ не влияют (видно по `/entrypoint.sh`), но мы их оставили.
 

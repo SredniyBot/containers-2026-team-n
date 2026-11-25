@@ -21,9 +21,9 @@ public record Config(
                 Path.of(env("DATA_DIR", "/data")),
                 env("DB_HOST", "localhost"),
                 Integer.parseInt(env("DB_PORT", "5432")),
-                env("POSTGRES_DB", "notes"),
-                env("POSTGRES_USER", "notes"),
-                env("POSTGRES_PASSWORD", ""),
+                env("DB_NAME", env("POSTGRES_DB", "notes")),
+                env("DB_USER", env("POSTGRES_USER", "notes")),
+                env("DB_PASSWORD", env("POSTGRES_PASSWORD", "")),
                 Integer.parseInt(env("MIGRATE_TIMEOUT", "60")));
     }
 

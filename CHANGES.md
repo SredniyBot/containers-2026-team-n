@@ -23,3 +23,8 @@
 - Манифесты в `k8s/`: Namespace, ConfigMap и Secret, PostgreSQL с PVC, приложение в двух репликах с init-контейнером `migrate`, Service для обоих.
 - Код приложения не менялся: команда `migrate` из ЛР 2 стала init-контейнером без доработок.
 - Отчёт [docs/lab4-kubernetes.md](docs/lab4-kubernetes.md).
+
+## После замечаний к ЛР 3 и 4
+
+- Настройки и учётные данные PostgreSQL и каждого приложения разделены по собственным ConfigMap и Secret; Deployment подключают их через `envFrom` без перечисления отдельных переменных.
+- Приложение «Заметки» использует `DB_NAME`, `DB_USER`, `DB_PASSWORD` в Kubernetes. Старые `POSTGRES_*` остаются совместимыми для Compose из ЛР 2.

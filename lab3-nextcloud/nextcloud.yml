@@ -6,9 +6,12 @@ metadata:
     app: nextcloud
 type: Opaque
 stringData:
+  # Доступ к БД задаётся для Nextcloud отдельно от Secret контейнера PostgreSQL.
   NEXTCLOUD_ADMIN_PASSWORD: "lab3-admin-password"
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "lab3-pg-password"
 ---
-# Новое: несекретные переменные Nextcloud, раньше были прописаны в Deployment
+# Несекретные переменные только Nextcloud
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -19,6 +22,7 @@ data:
   NEXTCLOUD_UPDATE: "1"
   ALLOW_EMPTY_PASSWORD: "yes"
   POSTGRES_HOST: "postgres-service"
+  POSTGRES_DB: "postgres"
   NEXTCLOUD_TRUSTED_DOMAINS: "127.0.0.1"
   NEXTCLOUD_ADMIN_USER: "labadmin"
 ---
@@ -57,28 +61,8 @@ spec:
         envFrom:
         - configMapRef:
             name: nextcloud-configmap
-        env:
-        # Чужие ключи по одному: имя БД из ConfigMap Postgres, доступ из его Secret
-        - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: postgres-configmap
-              key: POSTGRES_DB
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
-        - name: NEXTCLOUD_ADMIN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: nextcloud-secret
-              key: NEXTCLOUD_ADMIN_PASSWORD
+        - secretRef:
+            name: nextcloud-secret
         # Новое: пробы.
         # startupProbe даёт до 10 минут на первую установку. Пока она не прошла,
         # liveness и readiness не запускаются и не убьют под посреди установки.

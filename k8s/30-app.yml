@@ -34,9 +34,9 @@ spec:
           args: ["migrate"]
           envFrom:
             - configMapRef:
-                name: notes-config
+                name: notes-app-config
             - secretRef:
-                name: notes-db-secret
+                name: notes-app-secret
           resources:
             limits:
               cpu: 500m
@@ -51,9 +51,9 @@ spec:
               containerPort: 8080
           envFrom:
             - configMapRef:
-                name: notes-config
+                name: notes-app-config
             - secretRef:
-                name: notes-db-secret
+                name: notes-app-secret
           # readiness: база доступна, можно слать запросы
           readinessProbe:
             httpGet:
