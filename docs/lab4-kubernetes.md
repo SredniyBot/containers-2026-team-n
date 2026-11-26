@@ -44,10 +44,12 @@ minikube service notes-app -n notes --url
 | Кастомный образ хотя бы для одного | `notes-app:2.0` из нашего Dockerfile |
 | Контейнер и init-контейнер в одном Deployment | `notes-app`: init `migrate` и основной `app` |
 | Volume | PVC `notes-db-data` в `/var/lib/postgresql/data` |
-| ConfigMap и/или Secret | `notes-config` и `notes-db-secret` |
+| ConfigMap и/или Secret | У базы `notes-db-config` и `notes-db-secret`, у приложения `notes-app-config` и `notes-app-secret` |
 | Service | `notes-db` (ClusterIP) и `notes-app` (NodePort) |
 | Liveness / Readiness | у приложения обе, у базы `pg_isready` и TCP-проверка |
 | Метки сверх selector | `part-of`, `component`, `version` |
+
+Оба Deployment подключают переменные через `envFrom` только из собственных ConfigMap и Secret. Приложение использует имена `DB_NAME`, `DB_USER`, `DB_PASSWORD`, а образ PostgreSQL — `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`. Для пробы `pg_isready` в конфигурации базы заданы `PGDATABASE` и `PGUSER`, поэтому в Deployment не перечислены даже имена переменных для проверки. В init-контейнере и сервере один набор настроек приложения. Значения имени базы и учётных данных в двух наборах ресурсов должны совпадать.
 
 ## Ход работы
 
@@ -63,7 +65,7 @@ $ kubectl -n notes logs notes-app-ff98b99d8-6c5mm -c migrate
 2026-11-20T23:57:11.349433024Z migration done
 ```
 
-`MIGRATE_TIMEOUT` увеличен до 180 секунд, потому что первая инициализация базы у нас шла до двух минут. Две реплики запускают миграцию одновременно, и мешать друг другу им не даёт блокировка `pg_advisory_xact_lock`.
+`MIGRATE_TIMEOUT` в `notes-app-config` увеличен до 180 секунд, потому что первая инициализация базы у нас шла до двух минут. Две реплики запускают миграцию одновременно, и мешать друг другу им не даёт блокировка `pg_advisory_xact_lock`.
 
 ### Данные переживают удаление пода базы
 
@@ -73,7 +75,7 @@ $ curl http://127.0.0.1:52512/api/notes
 [{"id":2,"text":"Заметка из Kubernetes",...},{"id":1,"text":"Схему создала команда migrate",...}]
 ```
 
-Новый под подключил тот же PVC. `strategy: Recreate` не даёт двум Postgres одновременно писать в один том при обновлении. Реплика базы одна, поэтому StatefulSet не понадобился.
+Новый под подключил тот же PVC. `PGDATA` задан в `notes-db-config` и указывает на подкаталог тома, чтобы служебный `lost+found` не мешал инициализации. `strategy: Recreate` не даёт двум Postgres одновременно писать в один том при обновлении. Реплика базы одна, поэтому StatefulSet не понадобился.
 
 ### Пробы
 

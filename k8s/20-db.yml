@@ -48,19 +48,15 @@ spec:
               containerPort: 5432
           envFrom:
             - configMapRef:
-                name: notes-config
+                name: notes-db-config
             - secretRef:
                 name: notes-db-secret
-          env:
-            # Подкаталог: в корне тома может оказаться служебный lost+found
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+              command: ["pg_isready", "-q"]
             periodSeconds: 5
             failureThreshold: 3
           livenessProbe:
